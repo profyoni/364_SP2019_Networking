@@ -2,57 +2,64 @@ package edu.mco364;
 
 // Fig. 27.5: Server.java
 // Server portion of a client/server stream-socket connection. 
+import java.awt.*;
+import java.awt.event.*;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.awt.BorderLayout;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import javax.swing.JFrame;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
-import javax.swing.SwingUtilities;
+import javax.swing.*;
+
+enum Planet {
+   MERCURY (2.4E17, "Jublop"), VENUS(5,""), EARTH(7,""), MARS(42,"");
+
+   Planet(double mass, String watusiName) {
+      this.mass = mass;
+      this.watusiName = watusiName;
+   }
+   private double mass;
+   private String watusiName;
+
+   public String toString(){
+      return String.format("%s %d", watusiName, mass);
+   }
+}
 
 public class Server extends JFrame 
 {
    private JTextField enterField; // inputs message from user
-   private JTextArea displayArea; // display information to user
+   private JPanel displayArea; // display information to user
    private ObjectOutputStream output; // output stream to client
    private ObjectInputStream input; // input stream from client
    private ServerSocket server; // server socket
    private Socket connection; // connection to client
    private int counter = 1; // counter of number of connections
-
+ private Color currentColor = Color.BLACK;
    // set up GUI
    public Server()
    {
       super( "Server" );
 
-      enterField = new JTextField(); // create enterField
-      enterField.setEditable( false );
-      enterField.addActionListener(
-         new ActionListener() 
-         {
-            // send message to client
-            public void actionPerformed( ActionEvent event )
-            {
-               sendData( event.getActionCommand() );
-               enterField.setText( "" );
-            } // end method actionPerformed
-         } // end anonymous inner class
-      ); // end call to addActionListener
+      displayArea = new JPanel(); // create displayArea
+      displayArea.addMouseMotionListener(new MouseMotionAdapter() {
+         @Override
+         public void mouseDragged(MouseEvent e) {
+            sendData(e.getPoint());
+         }
+      });
+      displayArea.addMouseListener(new MouseAdapter() {
+         @Override
+         public void mouseClicked(MouseEvent e) {
+            currentColor = JColorChooser.showDialog(Server.this, "Choose a Color", currentColor);
+            sendData(currentColor);
+         }
+      });
+      add(displayArea , BorderLayout.CENTER );
 
-      add( enterField, BorderLayout.NORTH );
-
-      displayArea = new JTextArea(); // create displayArea
-      add( new JScrollPane( displayArea ), BorderLayout.CENTER );
-
-      setSize( 300, 150 ); // set size of window
-      setVisible( true ); // show window
+      setSize( 500, 500 ); // set size of window
+      setVisible(true);
    } // end Server constructor
 
    // set up and run server 
@@ -112,9 +119,6 @@ public class Server extends JFrame
    // process connection with client
    private void processConnection() throws IOException
    {
-      String message = "Connection successful";
-      sendData( message ); // send connection successful message
-
       // enable enterField so server user can send messages
       setTextFieldEditable( true );
 
@@ -122,15 +126,23 @@ public class Server extends JFrame
       { 
          try // read message and display it
          {
-            message = ( String ) input.readObject(); // read new message
-            displayMessage( "\n" + message ); // display message
+            Object o = input.readObject();
+            if (o instanceof Point) {
+               Point p = (Point) o; // read new message
+               Graphics g = displayArea.getGraphics();
+               g.setColor(currentColor);
+               g.fillOval(p.x, p.y, 30, 30);
+            }
+            else if (o instanceof Color) {
+               currentColor = (Color) o;
+            }
          } // end try
          catch ( ClassNotFoundException classNotFoundException ) 
          {
             displayMessage( "\nUnknown object type received" );
          } // end catch
 
-      } while ( !message.equals( "CLIENT>>> TERMINATE" ) );
+      } while ( true );
    } // end method processConnection
 
    // close streams and socket
@@ -152,17 +164,15 @@ public class Server extends JFrame
    } // end method closeConnection
 
    // send message to client
-   private void sendData( String message )
+   private void sendData( Object o )
    {
       try // send object to client
       {
-         output.writeObject( "SERVER>>> " + message );
+         output.writeObject( o );
          output.flush(); // flush output to client
-         displayMessage( "\nSERVER>>> " + message );
       } // end try
       catch ( IOException ioException ) 
       {
-         displayArea.append( "\nError writing object" );
       } // end catch
    } // end method sendData
 
@@ -174,7 +184,7 @@ public class Server extends JFrame
          {
             public void run() // updates displayArea
             {
-               displayArea.append( messageToDisplay ); // append message
+
             } // end method run
          } // end anonymous inner class
       ); // end call to SwingUtilities.invokeLater

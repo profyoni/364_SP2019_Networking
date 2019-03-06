@@ -2,30 +2,26 @@ package edu.mco364;
 
 // Fig. 27.7: Client.java
 // Client portion of a stream-socket connection between client and server.
+import java.awt.*;
+import java.awt.event.*;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.awt.BorderLayout;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import javax.swing.JFrame;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
-import javax.swing.SwingUtilities;
+import javax.swing.*;
 
 public class Client extends JFrame 
 {
    private JTextField enterField; // enters information from user
-   private JTextArea displayArea; // display information to user
+   private JPanel displayArea; // display information to user
    private ObjectOutputStream output; // output stream to server
    private ObjectInputStream input; // input stream from server
    private String message = ""; // message from server
    private String chatServer; // host server for this application
    private Socket client; // socket to communicate with server
+   private Color currentColor;
 
    // initialize chatServer and set up GUI
    public Client( String host )
@@ -34,26 +30,22 @@ public class Client extends JFrame
 
       chatServer = host; // set server to which this client connects
 
-      enterField = new JTextField(); // create enterField
-      enterField.setEditable( false );
-      enterField.addActionListener(
-         new ActionListener() 
-         {
-            // send message to server
-            public void actionPerformed( ActionEvent event )
-            {
-               sendData( event.getActionCommand() );
-               enterField.setText( "" );
-            } // end method actionPerformed
-         } // end anonymous inner class
-      ); // end call to addActionListener
-
-      add( enterField, BorderLayout.NORTH );
-
-      displayArea = new JTextArea(); // create displayArea
-      add( new JScrollPane( displayArea ), BorderLayout.CENTER );
-
-      setSize( 300, 150 ); // set size of window
+      displayArea = new JPanel(); // create displayArea
+      displayArea.addMouseMotionListener(new MouseMotionAdapter() {
+         @Override
+         public void mouseDragged(MouseEvent e) {
+            sendData(e.getPoint());
+         }
+      });
+      add(displayArea , BorderLayout.CENTER );
+      displayArea.addMouseListener(new MouseAdapter() {
+         @Override
+         public void mouseClicked(MouseEvent e) {
+            currentColor = JColorChooser.showDialog(edu.mco364.Client.this, "Choose a Color", currentColor);
+            sendData(currentColor);
+         }
+      });
+      setSize( 500, 500 ); // set size of window
       setVisible( true ); // show window
    } // end Client constructor
 
@@ -116,8 +108,17 @@ public class Client extends JFrame
       { 
          try // read message and display it
          {
-            message = ( String ) input.readObject(); // read new message
-            displayMessage( "\n" + message ); // display message
+            Object o = input.readObject();
+            if (o instanceof Point) {
+               Point p = (Point) o; // read new message
+               Graphics g = displayArea.getGraphics();
+               g.setColor(currentColor);
+               g.fillOval(p.x, p.y, 30, 30);
+            }
+            else if (o instanceof Color) {
+               currentColor = (Color) o;
+            }
+
          } // end try
          catch ( ClassNotFoundException classNotFoundException ) 
          {
@@ -146,17 +147,17 @@ public class Client extends JFrame
    } // end method closeConnection
 
    // send message to server
-   private void sendData( String message )
+   private void sendData( Object o )
    {
       try // send object to server
       {
-         output.writeObject( "CLIENT>>> " + message );
+         output.writeObject( o );
          output.flush(); // flush data to output
-         displayMessage( "\nCLIENT>>> " + message );
+
       } // end try
       catch ( IOException ioException )
       {
-         displayArea.append( "\nError writing object" );
+
       } // end catch
    } // end method sendData
 
@@ -168,7 +169,7 @@ public class Client extends JFrame
          {
             public void run() // updates displayArea
             {
-               displayArea.append( messageToDisplay );
+
             } // end method run
          }  // end anonymous inner class
       ); // end call to SwingUtilities.invokeLater
@@ -182,7 +183,7 @@ public class Client extends JFrame
          {
             public void run() // sets enterField's editability
             {
-               enterField.setEditable( editable );
+
             } // end method run
          } // end anonymous inner class
       ); // end call to SwingUtilities.invokeLater
