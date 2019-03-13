@@ -17,7 +17,7 @@ public class ClientTest
          application = new Client( args[ 0 ] ); // use args to connect
 
       application.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
-      application.runClient(); // run client application
+      application.start(); // run client application
    } // end main
 } // end class ClientTest
 

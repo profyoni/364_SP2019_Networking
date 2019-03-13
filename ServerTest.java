@@ -10,7 +10,7 @@ public class ServerTest
    {
       Server application = new Server(); // create server
       application.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
-      application.runServer(); // run server application
+      application.start(); // run server application
    } // end main
 } // end class ServerTest
 
